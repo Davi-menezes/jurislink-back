@@ -1,0 +1,5 @@
+# Build command
+pnpm install && pnpm build
+
+# Start command
+pnpm start

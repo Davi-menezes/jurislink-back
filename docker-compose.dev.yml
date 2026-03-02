@@ -1,0 +1,42 @@
+# Docker Compose para desenvolvimento local
+version: '3.8'
+
+services:
+  # Aplicação Next.js (dev mode)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NODE_ENV=development
+      - WATCHPACK_POLLING=true
+    env_file:
+      - .env.local
+    depends_on:
+      - redis
+    command: pnpm dev
+    networks:
+      - jurislink-network
+
+  # Redis local
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-dev-data:/data
+    networks:
+      - jurislink-network
+
+volumes:
+  redis-dev-data:
+
+networks:
+  jurislink-network:
+    driver: bridge

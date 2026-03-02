@@ -1,0 +1,22 @@
+# Dockerfile para desenvolvimento
+FROM node:20-alpine
+
+WORKDIR /app
+
+RUN apk add --no-cache libc6-compat
+
+# Instalar pnpm
+RUN corepack enable pnpm
+
+# Copiar package files
+COPY package.json pnpm-lock.yaml* ./
+
+# Instalar dependências
+RUN pnpm install
+
+# Copiar código
+COPY . .
+
+EXPOSE 3000
+
+CMD ["pnpm", "dev"]
