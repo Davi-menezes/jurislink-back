@@ -1,29 +1,34 @@
 "use client"
 
 import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
-import { useState, Suspense } from "react"
+import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 import { Scale, Loader2, User, Briefcase } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 import type { UserRole } from "@/lib/types"
 
 function SignUpForm() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const initialRole = (searchParams.get("role") as UserRole) || "CLIENT"
 
   const [loading, setLoading] = useState(false)
-  const [role, setRole] = useState<UserRole>(initialRole)
+  const [role, setRole] = useState<UserRole>("CLIENT")
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [lgpdAccepted, setLgpdAccepted] = useState(false)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const queryRole = params.get("role")
+    if (queryRole === "LAWYER" || queryRole === "CLIENT") {
+      setRole(queryRole)
+    }
+  }, [])
 
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault()
@@ -277,9 +282,5 @@ function SignUpForm() {
 }
 
 export default function SignUpPage() {
-  return (
-    <Suspense>
-      <SignUpForm />
-    </Suspense>
-  )
+  return <SignUpForm />
 }
