@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
     }
 
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+      || process.env.SUPABASE_SECRET_KEY
     if (!serviceRoleKey) {
       return NextResponse.json(
         { error: "SUPABASE_SERVICE_ROLE_KEY não configurada no backend." },

@@ -1,4 +1,4 @@
-import { redis } from './redis'
+import { getRedis } from './redis'
 
 export async function rateLimit(
   identifier: string,
@@ -6,6 +6,15 @@ export async function rateLimit(
   window: number = 60
 ): Promise<{ success: boolean; remaining: number; reset: number }> {
   try {
+    const redis = getRedis()
+    if (!redis) {
+      return {
+        success: true,
+        remaining: limit,
+        reset: window,
+      }
+    }
+
     const key = `ratelimit:${identifier}`
     const now = Date.now()
     const windowStart = now - window * 1000

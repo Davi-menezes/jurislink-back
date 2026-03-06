@@ -20,9 +20,21 @@ export async function POST(request: NextRequest) {
   let user = null
 
   if (bearerToken) {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const publishableKey =
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!url || !publishableKey) {
+      return NextResponse.json(
+        { error: "Configuração Supabase incompleta no backend." },
+        { status: 500, headers: corsHeaders() },
+      )
+    }
+
     const adminClient = createAdminClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      url,
+      publishableKey,
     )
     const { data } = await adminClient.auth.getUser(bearerToken)
     user = data.user
@@ -62,7 +74,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400, headers: corsHeaders() })
     }
 
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY
     if (!serviceRoleKey) {
       return NextResponse.json(
         { error: "SUPABASE_SERVICE_ROLE_KEY não configurada no backend." },
@@ -70,8 +82,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    if (!url) {
+      return NextResponse.json(
+        { error: "NEXT_PUBLIC_SUPABASE_URL não configurada no backend." },
+        { status: 500, headers: corsHeaders() },
+      )
+    }
+
     const storageClient = createAdminClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      url,
       serviceRoleKey,
     )
 
