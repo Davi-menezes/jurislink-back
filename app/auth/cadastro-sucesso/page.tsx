@@ -1,6 +1,5 @@
 import Link from "next/link"
 import { Scale, MailCheck } from "lucide-react"
-import { Button } from "@/components/ui/button"
 
 export default function SignUpSuccessPage() {
   return (
@@ -24,9 +23,12 @@ export default function SignUpSuccessPage() {
           Enviamos um link de confirmacao para o seu email. Clique no link
           para ativar sua conta e comecar a usar o JurisLink.
         </p>
-        <Button className="mt-8" asChild>
-          <Link href="/auth/login">Ir para o Login</Link>
-        </Button>
+        <Link
+          href="/auth/login"
+          className="mt-8 inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+        >
+          Ir para o Login
+        </Link>
       </div>
     </div>
   )
