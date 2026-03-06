@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter, DM_Serif_Display } from 'next/font/google'
-import { Toaster } from 'sonner'
+import { ToasterClient } from '@/components/toaster-client'
 
 import './globals.css'
 
@@ -40,7 +40,7 @@ export default function RootLayout({
     <html lang="pt-BR" className={`${inter.variable} ${dmSerif.variable}`}>
       <body className="font-sans antialiased">
         {children}
-        <Toaster richColors position="top-right" />
+        <ToasterClient />
       </body>
     </html>
   )
