@@ -651,7 +651,10 @@ export async function exchangeGoogleCode(code: string, role?: UserRole) {
   })
 
   if (!tokenResponse.ok) {
-    throw new Error("Não foi possível concluir o login com o Google.")
+    const errorText = await tokenResponse.text()
+    throw new Error(
+      `Falha ao trocar o code do Google por token. redirect_uri=${authConfig.googleCallbackUrl}. Resposta: ${errorText}`,
+    )
   }
 
   const tokenData = await tokenResponse.json()
@@ -668,7 +671,8 @@ export async function exchangeGoogleCode(code: string, role?: UserRole) {
   })
 
   if (!userInfoResponse.ok) {
-    throw new Error("Não foi possível obter o perfil do Google.")
+    const errorText = await userInfoResponse.text()
+    throw new Error(`Não foi possível obter o perfil do Google. Resposta: ${errorText}`)
   }
 
   const googleProfile = (await userInfoResponse.json()) as GoogleProfile
