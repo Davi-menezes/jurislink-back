@@ -33,6 +33,12 @@ export const authConfig = {
     process.env.JWT_EXPIRES_IN || DEFAULT_JWT_EXPIRES_IN,
   ),
   appUrl: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+  frontendUrl:
+    process.env.FRONTEND_URL ||
+    process.env.FRONTEND_CALLBACK_URL ||
+    process.env.NEXT_PUBLIC_FRONTEND_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    "http://localhost:3000",
   googleClientId: process.env.GOOGLE_CLIENT_ID || "",
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
   googleCallbackUrl:

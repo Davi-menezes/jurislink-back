@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { authConfig } from "@/lib/auth/config"
 import {
   decodeGoogleState,
   exchangeGoogleCode,
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
   const state = decodeGoogleState(searchParams.get("state"))
 
   if (error || !code) {
-    const url = new URL("/auth/error", origin)
+    const url = new URL("/auth/error", authConfig.frontendUrl)
     if (error) {
       url.searchParams.set("reason", error)
     }
@@ -30,7 +31,10 @@ export async function GET(request: NextRequest) {
   try {
     const result = await exchangeGoogleCode(code, state.role)
     const redirectPath = getRedirectPathForRole(result.user.role, state.next)
-    const response = NextResponse.redirect(`${origin}${redirectPath}`)
+    const callbackUrl = new URL("/auth/callback", authConfig.frontendUrl)
+    callbackUrl.searchParams.set("token", result.sessionToken)
+    callbackUrl.searchParams.set("next", redirectPath)
+    const response = NextResponse.redirect(callbackUrl.toString())
     return attachSessionCookie(response, result.sessionToken)
   } catch (caughtError) {
     const message =
@@ -49,7 +53,7 @@ export async function GET(request: NextRequest) {
       ),
     })
 
-    const url = new URL("/auth/error", origin)
+    const url = new URL("/auth/error", authConfig.frontendUrl)
     url.searchParams.set("reason", "callback_failed")
     url.searchParams.set("details", message)
     return NextResponse.redirect(url.toString())

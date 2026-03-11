@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
       success: true,
       user: result.user,
       redirectPath: result.redirectPath,
+      token: result.sessionToken,
     })
 
     return attachSessionCookie(response, result.sessionToken)
