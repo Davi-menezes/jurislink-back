@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -47,38 +46,24 @@ export default function LawyerProfileForm() {
   }, [])
 
   async function loadData() {
-    const supabase = createClient()
-    
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
+    const response = await fetch("/api/lawyer-profile")
+    const payload = await response.json().catch(() => null)
+
+    if (response.status === 401) {
       router.push("/auth/login")
       return
     }
+    if (!response.ok) {
+      toast.error("Erro ao carregar perfil", {
+        description: payload?.error || "Não foi possível carregar seus dados.",
+      })
+      return
+    }
 
-    // Carregar áreas jurídicas
-    const { data: areas } = await supabase
-      .from("legal_areas")
-      .select("*")
-      .eq("is_active", true)
-      .order("name")
-    
-    if (areas) setLegalAreas(areas)
-
-    // Carregar perfil existente
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .single()
-
-    const { data: lawyerProfile } = await supabase
-      .from("lawyer_profiles")
-      .select(`
-        *,
-        lawyer_legal_areas(area_id)
-      `)
-      .eq("user_id", user.id)
-      .single()
+    const areas = payload?.legalAreas || []
+    const profile = payload?.profile
+    const lawyerProfile = payload?.lawyerProfile
+    setLegalAreas(areas)
 
     if (lawyerProfile) {
       setAvatarUrl(profile?.avatar_url || null)
@@ -112,129 +97,18 @@ export default function LawyerProfileForm() {
     e.preventDefault()
     setLoading(true)
 
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      toast.error("Não autenticado")
-      setLoading(false)
-      return
-    }
-
     try {
-      // Atualizar profile
-      await supabase
-        .from("profiles")
-        .update({
-          state: formData.state,
-          city: formData.city,
-          phone: formData.phone,
-        })
-        .eq("id", user.id)
+      const response = await fetch("/api/lawyer-profile", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      })
+      const payload = await response.json().catch(() => null)
 
-      // Gerar slug
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", user.id)
-        .single()
-
-      const slug = profile?.full_name
-        ?.toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, "")
-        + `-${formData.oab_number}-${formData.oab_state}`.toLowerCase()
-
-      // Verificar se perfil do advogado já existe
-      const { data: existingLawyer } = await supabase
-        .from("lawyer_profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .single()
-
-      if (existingLawyer) {
-        // Atualizar
-        await supabase
-          .from("lawyer_profiles")
-          .update({
-            oab_number: formData.oab_number,
-            oab_state: formData.oab_state,
-            state: formData.state,
-            city: formData.city,
-            serves_entire_state: formData.serves_entire_state,
-            years_experience: parseInt(formData.years_experience.toString()),
-            headline: formData.headline,
-            bio: formData.bio,
-            education: formData.education,
-            website: formData.website,
-            linkedin: formData.linkedin,
-            hourly_rate_min: formData.hourly_rate_min ? parseInt(formData.hourly_rate_min) : null,
-            hourly_rate_max: formData.hourly_rate_max ? parseInt(formData.hourly_rate_max) : null,
-            accepts_online: formData.accepts_online,
-            accepts_in_person: formData.accepts_in_person,
-            office_address: formData.office_address,
-            slug,
-          })
-          .eq("id", existingLawyer.id)
-
-        // Atualizar áreas jurídicas
-        // Remover todas as existentes
-        await supabase
-          .from("lawyer_legal_areas")
-          .delete()
-          .eq("lawyer_id", existingLawyer.id)
-
-        // Adicionar novas
-        if (formData.selected_areas.length > 0) {
-          await supabase
-            .from("lawyer_legal_areas")
-            .insert(
-              formData.selected_areas.map(area_id => ({
-                lawyer_id: existingLawyer.id,
-                area_id,
-              }))
-            )
-        }
-      } else {
-        // Criar novo
-        const { data: newLawyer } = await supabase
-          .from("lawyer_profiles")
-          .insert({
-            user_id: user.id,
-            oab_number: formData.oab_number,
-            oab_state: formData.oab_state,
-            state: formData.state,
-            city: formData.city,
-            serves_entire_state: formData.serves_entire_state,
-            years_experience: parseInt(formData.years_experience.toString()),
-            headline: formData.headline,
-            bio: formData.bio,
-            education: formData.education,
-            website: formData.website,
-            linkedin: formData.linkedin,
-            hourly_rate_min: formData.hourly_rate_min ? parseInt(formData.hourly_rate_min) : null,
-            hourly_rate_max: formData.hourly_rate_max ? parseInt(formData.hourly_rate_max) : null,
-            accepts_online: formData.accepts_online,
-            accepts_in_person: formData.accepts_in_person,
-            office_address: formData.office_address,
-            slug,
-          })
-          .select()
-          .single()
-
-        // Adicionar áreas jurídicas
-        if (newLawyer && formData.selected_areas.length > 0) {
-          await supabase
-            .from("lawyer_legal_areas")
-            .insert(
-              formData.selected_areas.map(area_id => ({
-                lawyer_id: newLawyer.id,
-                area_id,
-              }))
-            )
-        }
+      if (!response.ok) {
+        throw new Error(payload?.error || "Erro ao salvar perfil")
       }
 
       toast.success("Perfil atualizado com sucesso!")

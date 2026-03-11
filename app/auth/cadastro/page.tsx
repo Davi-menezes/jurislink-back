@@ -4,7 +4,6 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { Scale, Loader2, User, Briefcase } from "lucide-react"
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -21,6 +20,7 @@ function SignUpForm() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [lgpdAccepted, setLgpdAccepted] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -77,41 +77,7 @@ function SignUpForm() {
     }
 
     setLoading(true)
-    const supabase = createClient()
-
-    // Verificar se o usuário já existe
     const normalizedEmail = email.trim().toLowerCase()
-    const { data: existingUser, error: profileLookupError } = await supabase
-      .from("profiles")
-      .select("id, email_verified")
-      .eq("email", normalizedEmail)
-      .maybeSingle()
-
-    if (profileLookupError) {
-      console.warn("Não foi possível verificar email em profiles:", profileLookupError.message)
-    }
-
-    if (existingUser) {
-      if (!existingUser.email_verified) {
-        await fetch("/api/auth/resend-verification", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: normalizedEmail }),
-        })
-
-        toast.info("Email de verificação já enviado", {
-          description: "Seu cadastro já existe, mas não foi confirmado. Reenviamos o link de verificação para sua caixa de entrada e spam.",
-        })
-        setLoading(false)
-        return
-      } else {
-        toast.error("Email já cadastrado", {
-          description: "Este email já está em uso. Faça login ou use outro email.",
-        })
-        setLoading(false)
-        return
-      }
-    }
 
     const response = await fetch("/api/auth/signup", {
       method: "POST",
@@ -121,11 +87,13 @@ function SignUpForm() {
         email: normalizedEmail,
         password,
         role,
+        lgpdAccepted,
       }),
     })
 
+    const body = await response.json().catch(() => null)
+
     if (!response.ok) {
-      const body = await response.json().catch(() => null)
       toast.error("Erro ao criar conta", {
         description: body?.error || "Não foi possível criar a conta.",
       })
@@ -133,10 +101,16 @@ function SignUpForm() {
       return
     }
 
-    toast.success("Conta criada!", {
-      description: "Verifique seu email para ativar sua conta.",
+    toast.success(body?.status === "verification_resent" ? "Verificação reenviada!" : "Conta criada!", {
+      description:
+        body?.message || "Verifique seu email para ativar sua conta.",
     })
     router.push("/auth/cadastro-sucesso")
+  }
+
+  function handleGoogleSignUp() {
+    setGoogleLoading(true)
+    window.location.href = `/api/auth/google?role=${role}`
   }
 
   return (
@@ -166,8 +140,16 @@ function SignUpForm() {
             </p>
           </div>
 
-          {/* Login com Google removido - apenas email/senha */}
-          {/* Para habilitar OAuth, configure no Supabase Dashboard → Authentication → Providers */}
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            disabled={loading || googleLoading}
+            onClick={handleGoogleSignUp}
+          >
+            {googleLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Continuar com Google
+          </Button>
 
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
@@ -263,7 +245,7 @@ function SignUpForm() {
                 , conforme a LGPD.
               </Label>
             </div>
-            <Button type="submit" disabled={loading} className="mt-2">
+            <Button type="submit" disabled={loading || googleLoading} className="mt-2">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Criar Conta
             </Button>

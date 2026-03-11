@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
+import { getCurrentAuthenticatedUser } from "@/lib/auth/service"
 import { Heart, MessageSquare, User, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -8,20 +9,13 @@ import Link from "next/link"
 
 export default async function ClientDashboard() {
   const supabase = await createClient()
-  
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getCurrentAuthenticatedUser()
 
   if (!user) {
     redirect("/auth/login")
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single()
+  const profile = user.profile
 
   if (!profile || profile.role !== "CLIENT") {
     redirect("/")

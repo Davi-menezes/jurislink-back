@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { Loader2, RotateCw, Upload } from "lucide-react"
 import { toast } from "sonner"
-import { createClient } from "@/lib/supabase/client"
 import { buildApiUrl } from "@/lib/api"
 
 interface AvatarEditorUploadProps {
@@ -121,21 +120,9 @@ export function AvatarEditorUpload({ initialUrl, onUploaded }: AvatarEditorUploa
 
       const formData = new FormData()
       formData.append("file", new File([blob], `avatar-${Date.now()}.jpg`, { type: "image/jpeg" }))
-      const supabase = createClient()
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session?.access_token) {
-        throw new Error("Sessão expirada. Faça login novamente.")
-      }
-
       const response = await fetch(buildApiUrl("/api/upload/avatar"), {
         method: "POST",
         body: formData,
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
       })
 
       const payload = await response.json()

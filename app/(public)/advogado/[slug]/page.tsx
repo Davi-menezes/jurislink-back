@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
+import { getCurrentAuthenticatedUser } from "@/lib/auth/service"
 import { Metadata } from "next"
 import { 
   MapPin, 
@@ -162,7 +163,7 @@ export default async function LawyerPage({ params }: LawyerPageProps) {
   }
 
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getCurrentAuthenticatedUser()
   
   // Verificar se está favoritado
   let isFavorited = false

@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { getAuthenticatedUserFromRequest } from "@/lib/auth/service"
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   const supabase = await createClient()
-  
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getAuthenticatedUserFromRequest(request)
 
   if (!user) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
@@ -69,10 +67,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   const supabase = await createClient()
-  
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getAuthenticatedUserFromRequest(request)
 
   if (!user) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 })

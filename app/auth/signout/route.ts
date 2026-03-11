@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { clearSessionCookieFromResponse } from "@/lib/auth/session"
 
 export async function POST(request: Request) {
-  const supabase = await createClient()
-  await supabase.auth.signOut()
   const { origin } = new URL(request.url)
-  return NextResponse.redirect(`${origin}/`, { status: 302 })
+  const response = NextResponse.redirect(`${origin}/`, { status: 302 })
+  return clearSessionCookieFromResponse(response)
 }

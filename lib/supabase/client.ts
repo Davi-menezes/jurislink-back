@@ -1,4 +1,4 @@
-import { createBrowserClient } from '@supabase/ssr'
+import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 
 export function createClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -8,12 +8,14 @@ export function createClient() {
 
   if (!url || !publishableKey) {
     throw new Error(
-      "Supabase envs ausentes. Configure NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (ou NEXT_PUBLIC_SUPABASE_ANON_KEY)."
+      "Supabase envs ausentes. Configure NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (ou NEXT_PUBLIC_SUPABASE_ANON_KEY).",
     )
   }
 
-  return createBrowserClient(
-    url,
-    publishableKey,
-  )
+  return createSupabaseClient(url, publishableKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  })
 }

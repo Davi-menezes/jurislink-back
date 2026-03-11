@@ -1,24 +1,18 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { getAuthenticatedUserFromRequest } from "@/lib/auth/service"
 import { createPaymentPreference } from "@/lib/mercadopago/client"
 
 // POST - Criar pagamento para boost
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
-  
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getAuthenticatedUserFromRequest(request)
 
   if (!user) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, email")
-    .eq("id", user.id)
-    .single()
+  const profile = user.profile
 
   if (!profile || profile.role !== "LAWYER") {
     return NextResponse.json({ error: "Apenas advogados podem ativar boost" }, { status: 403 })
@@ -48,7 +42,7 @@ export async function POST(request: NextRequest) {
       price: 99.00,
       quantity: 1,
       external_reference: `boost_${lawyerProfile.id}_${Date.now()}`,
-      payer_email: profile.email,
+      payer_email: profile.email || user.email,
       back_urls: {
         success: `${baseUrl}/painel/advogado?boost=sucesso`,
         failure: `${baseUrl}/painel/advogado?boost=erro`,

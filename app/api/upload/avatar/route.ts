@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import { createClient as createAdminClient } from "@supabase/supabase-js"
+import { createAdminClient } from "@/lib/supabase/admin"
+import { getAuthenticatedUserFromRequest } from "@/lib/auth/service"
 
 function corsHeaders() {
   return {
@@ -15,37 +16,8 @@ export async function OPTIONS() {
 }
 
 export async function POST(request: NextRequest) {
-  const bearerToken = request.headers.get("authorization")?.replace("Bearer ", "")
   const supabase = await createClient()
-  let user = null
-
-  if (bearerToken) {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const publishableKey =
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-    if (!url || !publishableKey) {
-      return NextResponse.json(
-        { error: "Configuração Supabase incompleta no backend." },
-        { status: 500, headers: corsHeaders() },
-      )
-    }
-
-    const adminClient = createAdminClient(
-      url,
-      publishableKey,
-    )
-    const { data } = await adminClient.auth.getUser(bearerToken)
-    user = data.user
-  }
-
-  if (!user) {
-    const {
-      data: { user: cookieUser },
-    } = await supabase.auth.getUser()
-    user = cookieUser
-  }
+  const user = await getAuthenticatedUserFromRequest(request)
 
   if (!user) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401, headers: corsHeaders() })
@@ -74,26 +46,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400, headers: corsHeaders() })
     }
 
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY
-    if (!serviceRoleKey) {
-      return NextResponse.json(
-        { error: "SUPABASE_SERVICE_ROLE_KEY não configurada no backend." },
-        { status: 500, headers: corsHeaders() },
-      )
-    }
-
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-    if (!url) {
-      return NextResponse.json(
-        { error: "NEXT_PUBLIC_SUPABASE_URL não configurada no backend." },
-        { status: 500, headers: corsHeaders() },
-      )
-    }
-
-    const storageClient = createAdminClient(
-      url,
-      serviceRoleKey,
-    )
+    const storageClient = createAdminClient()
 
     const extension = file.type.split("/")[1] || "jpg"
     const storagePath = `${user.id}/${Date.now()}.${extension}`

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { getCurrentAuthenticatedUser } from "@/lib/auth/service"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
 
@@ -8,9 +9,7 @@ export default async function PublicLayout({
   children: React.ReactNode
 }) {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getCurrentAuthenticatedUser()
 
   let profile = null
   if (user) {

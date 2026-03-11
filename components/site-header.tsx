@@ -132,7 +132,7 @@ export function SiteHeader({ user }: SiteHeaderProps) {
             <div className="flex flex-col gap-2 pt-3 border-t border-border">
               {user ? (
                 <Button variant="outline" size="sm" asChild>
-                  <Link href={user.role === "LAWYER" ? "/painel/advogado" : "/painel/cliente"}>
+                  <Link href={user.role === "LAWYER" ? "/painel/advogado" : user.role === "ADMIN" ? "/painel/admin" : "/painel/cliente"}>
                     Meu Painel
                   </Link>
                 </Button>

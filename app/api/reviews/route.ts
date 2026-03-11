@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { getAuthenticatedUserFromRequest } from "@/lib/auth/service"
 
 // GET - Listar avaliações de um advogado
 export async function GET(request: NextRequest) {
@@ -36,21 +37,14 @@ export async function GET(request: NextRequest) {
 // POST - Criar nova avaliação
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
-  
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getAuthenticatedUserFromRequest(request)
 
   if (!user) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
   }
 
   // Verificar se é cliente
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single()
+  const profile = user.profile
 
   if (!profile || profile.role !== "CLIENT") {
     return NextResponse.json({ error: "Apenas clientes podem avaliar" }, { status: 403 })

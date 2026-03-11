@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -64,15 +63,21 @@ export default function ResetPasswordPage() {
     }
 
     setLoading(true)
-
-    const supabase = createClient()
-    const { error } = await supabase.auth.updateUser({
-      password: password,
+    const response = await fetch("/api/auth/reset-password", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        token: new URLSearchParams(window.location.search).get("token"),
+        password,
+      }),
     })
+    const payload = await response.json().catch(() => null)
 
-    if (error) {
+    if (!response.ok) {
       toast.error("Erro ao redefinir senha", {
-        description: error.message,
+        description: payload?.error || "Não foi possível redefinir sua senha.",
       })
       setLoading(false)
       return

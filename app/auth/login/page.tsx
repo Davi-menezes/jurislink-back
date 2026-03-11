@@ -4,7 +4,6 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { Scale, Loader2 } from "lucide-react"
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -13,6 +12,7 @@ import { toast } from "sonner"
 export default function LoginPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
 
@@ -20,89 +20,44 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
 
-    const supabase = createClient()
     const normalizedEmail = email.trim().toLowerCase()
-    let emailExists = false
-
-    // Valida o estado do email antes do login quando o schema de profiles estiver disponível.
-    const { data: profileByEmail, error: profileLookupError } = await supabase
-      .from("profiles")
-      .select("id, email_verified")
-      .eq("email", normalizedEmail)
-      .maybeSingle()
-
-    if (!profileLookupError) {
-      if (!profileByEmail) {
-        toast.error("Email não cadastrado", {
-          description: "Esse email não foi cadastrado. Crie sua conta para continuar.",
-        })
-        setLoading(false)
-        return
-      }
-
-      emailExists = true
-
-      if (profileByEmail.email_verified === false) {
-        toast.error("Email não verificado", {
-          description: "Seu email já existe, mas ainda não foi verificado. Verifique sua caixa de entrada e spam.",
-        })
-        setLoading(false)
-        return
-      }
-    } else {
-      console.warn("Não foi possível validar email em profiles:", profileLookupError.message)
-    }
-
-    const { error, data } = await supabase.auth.signInWithPassword({
-      email: normalizedEmail,
-      password,
+    const response = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: normalizedEmail,
+        password,
+      }),
     })
 
-    if (error) {
+    const payload = await response.json().catch(() => null)
+
+    if (!response.ok) {
       toast.error("Erro ao entrar", {
-        description: error.message === "Email not confirmed" 
-          ? "Verifique seu email antes de fazer login. Cheque sua caixa de entrada e spam."
-          : error.message === "Invalid login credentials"
-          ? (emailExists ? "Senha incorreta. Tente novamente." : "Esse email não foi cadastrado.")
-          : error.message,
+        description: payload?.error || "Não foi possível realizar seu login.",
       })
       setLoading(false)
       return
     }
 
-    // Verificar se o email foi confirmado
-    if (data.user && !data.user.email_confirmed_at) {
-      toast.error("Email não verificado", {
-        description: "Por favor, verifique seu email antes de fazer login. Cheque sua caixa de entrada e spam.",
-      })
-      await supabase.auth.signOut()
-      setLoading(false)
-      return
-    }
-
-    // Buscar perfil e redirecionar
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    
-    if (user) {
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle()
-
-      if (profileError) {
-        console.warn("Erro ao carregar role em profiles:", profileError.message)
-      }
-
-      const role = profile?.role || user.user_metadata?.role || "CLIENT"
-      if (role === "LAWYER") router.push("/painel/advogado")
-      else if (role === "ADMIN") router.push("/painel/admin")
-      else router.push("/painel/cliente")
-    }
-
+    const next = new URLSearchParams(window.location.search).get("next")
+    const redirectPath =
+      next && next.startsWith("/") ? next : payload?.redirectPath || "/painel/cliente"
+    router.push(redirectPath)
     router.refresh()
+    setLoading(false)
+  }
+
+  function handleGoogleLogin() {
+    setGoogleLoading(true)
+    const next = new URLSearchParams(window.location.search).get("next")
+    const url = next
+      ? `/api/auth/google?next=${encodeURIComponent(next)}`
+      : "/api/auth/google"
+
+    window.location.href = url
   }
 
   return (
@@ -130,8 +85,16 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Login com Google removido - apenas email/senha */}
-          {/* Para habilitar OAuth, configure no Supabase Dashboard → Authentication → Providers */}
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            disabled={googleLoading || loading}
+            onClick={handleGoogleLogin}
+          >
+            {googleLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Entrar com Google
+          </Button>
 
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
@@ -154,7 +117,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                disabled={loading}
+                disabled={loading || googleLoading}
               />
             </div>
             <div className="flex flex-col gap-2">
@@ -171,10 +134,10 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                disabled={loading}
+                disabled={loading || googleLoading}
               />
             </div>
-            <Button type="submit" disabled={loading} className="mt-2">
+            <Button type="submit" disabled={loading || googleLoading} className="mt-2">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Entrar
             </Button>

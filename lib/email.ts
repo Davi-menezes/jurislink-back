@@ -10,12 +10,12 @@ const getResendClient = () => {
 
 // Email do remetente - use SMTP_FROM ou o padrão do Resend
 const getFromEmail = () => {
-  return process.env.SMTP_FROM || 'JurisLink <onboarding@resend.dev>';
+  return process.env.EMAIL_FROM || process.env.SMTP_FROM || 'JurisLink <onboarding@resend.dev>';
 };
 
 // Email para notificações de leads
 const getLeadEmail = () => {
-  return process.env.SMTP_FROM_LEADS || process.env.SMTP_FROM || 'leads@resend.dev';
+  return process.env.SMTP_FROM_LEADS || process.env.EMAIL_FROM || process.env.SMTP_FROM || 'leads@resend.dev';
 };
 
 export async function sendVerificationEmail(

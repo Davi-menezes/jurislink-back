@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react"
@@ -17,53 +16,29 @@ function VerifyContent() {
 
   useEffect(() => {
     const verifyEmail = async () => {
-      const supabase = createClient()
-      
-      // O Supabase automaticamente verifica o email via URL params
-      // Apenas precisamos verificar se o usuário está autenticado
-      const { data: { user }, error } = await supabase.auth.getUser()
-
-      if (error || !user) {
+      const token = searchParams.get("token")
+      if (!token) {
         setStatus("error")
         setMessage("Link de verificação inválido ou expirado.")
         return
       }
 
-      if (user.email_confirmed_at) {
-        setStatus("success")
-        setMessage("Email verificado com sucesso!")
-        
-        // Criar perfil se não existir
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("id", user.id)
-          .single()
+      const response = await fetch(`/api/auth/verify-email?token=${encodeURIComponent(token)}`)
+      const payload = await response.json().catch(() => null)
 
-        if (!profile) {
-          // Criar perfil básico
-          await supabase.from("profiles").insert({
-            id: user.id,
-            full_name: user.user_metadata?.full_name || "",
-            role: user.user_metadata?.role || "CLIENT",
-            lgpd_accepted: true,
-            lgpd_accepted_at: new Date().toISOString(),
-          })
-        }
-
-        // Redirecionar após 3 segundos
-        setTimeout(() => {
-          const role = user.user_metadata?.role || "CLIENT"
-          if (role === "LAWYER") {
-            router.push("/painel/advogado/perfil")
-          } else {
-            router.push("/painel/cliente")
-          }
-        }, 3000)
-      } else {
+      if (!response.ok) {
         setStatus("error")
-        setMessage("Erro ao verificar email. Tente novamente.")
+        setMessage(payload?.error || "Erro ao verificar email. Tente novamente.")
+        return
       }
+
+      setStatus("success")
+      setMessage("Email verificado com sucesso!")
+
+      setTimeout(() => {
+        router.push(payload?.redirectPath || "/painel/cliente")
+        router.refresh()
+      }, 3000)
     }
 
     verifyEmail()
